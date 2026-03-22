@@ -1,0 +1,184 @@
+<script setup lang="ts">
+import { usePlaylistInfoStore, usePlayerStore } from '@renderer/plugins/pinia'
+import { toRefs, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
+const playlistInfoStore = usePlaylistInfoStore()
+const playerStore = usePlayerStore()
+const { current, list, pageList, pageSize, pageNo, total } = toRefs(playlistInfoStore)
+const { playing, currentSong, playinglist, songIndex } = toRefs(playerStore)
+
+const getPlaylistInfo = async (id: number): Promise<void> => {
+  const infoRes = await window.electron.ipcRenderer.invoke('/songlist', { id })
+  list.value = infoRes['songlist']
+  total.value = infoRes['songlist'].length
+}
+
+const getPlaylistInfoByPage = (newPage: number): void => {
+  pageNo.value = newPage
+  let arrStart = (pageNo.value - 1) * pageSize.value
+  let arrEnd = arrStart + pageSize.value
+  if (arrEnd >= list.value.length) arrEnd = list.value.length
+  pageList.value = list.value.slice(arrStart, arrEnd)
+}
+
+const joinSingerName = (singer: []): string => {
+  return singer.map((item) => item['name']).join('/')
+}
+
+const transformTime = (time: number): string => {
+  let min = Math.floor(time / 60)
+  let sec = time % 60
+  return `0${min}:${sec < 10 ? '0' + sec : sec}`
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const playSong = (scope: any): void => {
+  playing.value = true
+  currentSong.value = scope.row
+  songIndex.value = (pageNo.value - 1) * pageSize.value + scope.$index
+  playinglist.value = list.value
+}
+
+onMounted(async () => {
+  console.log('mounted')
+  if (route.params.id) {
+    const id = parseInt(route.params.id as string)
+    current.value = id
+    await getPlaylistInfo(id)
+    getPlaylistInfoByPage(1)
+  } else if (current.value) {
+    await getPlaylistInfo(current.value)
+    getPlaylistInfoByPage(1)
+  } else {
+    router.push('/')
+  }
+})
+</script>
+
+<template>
+  <div class="playlist-info">
+    <div class="playlist-info-content">
+      <el-table
+        :data="pageList"
+        height="100%"
+        row-class-name="table-song-row"
+        cell-class-name="table-song-cell"
+      >
+        <el-table-column label="序号" width="80" align="center">
+          <template #default="scope">
+            <div class="song-index">{{ scope.$index + 1 }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="歌名/歌手" width="200">
+          <template #default="scope">
+            <div class="SONGINFO">
+              <p class="songName">{{ scope.row['songname'] }}</p>
+              <p class="singerName">{{ joinSingerName(scope.row['singer']) }}</p>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" align="center">
+          <template #default="scope">
+            <div class="song-controls">
+              <el-icon size="24" @click="playSong(scope)"><i-ep-CaretRight /></el-icon>
+              <el-icon size="20"><i-ep-CirclePlus /></el-icon>
+              <el-icon size="20"><i-ep-Star /></el-icon>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="专辑" width="200">
+          <template #default="scope">
+            <div class="albumName">{{ scope.row['albumname'] }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="时长" width="120" align="center">
+          <template #default="scope">
+            {{ transformTime(scope.row['interval']) }}
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    <div class="playlist-info-footer">
+      <el-pagination
+        background
+        layout="total, prev, pager, next, jumper"
+        :page-size="pageSize"
+        :current-page="pageNo"
+        :total="total"
+        @current-change="getPlaylistInfoByPage"
+      />
+    </div>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.playlist-info {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .playlist-info-content {
+    height: calc(100% - 50px);
+    margin: 0 -20px;
+
+    .song-index {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .song-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      i {
+        margin: 0 10px;
+        cursor: pointer;
+        &:hover {
+          color: var(--el-color-primary);
+        }
+      }
+    }
+
+    .SONGINFO {
+      width: 100%;
+      .songName {
+        max-width: 200px;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .singerName {
+        max-width: 200px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .albumName {
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .playlist-info-footer {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    margin-top: 10px;
+  }
+}
+</style>

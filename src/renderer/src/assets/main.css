@@ -1,0 +1,23 @@
+* {
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+.play-type-options {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-type-options div {
+  width: 100%;
+  padding: 10px;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover {
+    background-color: var(--el-color-primary-light-9);
+  }
+}
