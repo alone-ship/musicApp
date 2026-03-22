@@ -43,7 +43,6 @@ const playSong = (scope: any): void => {
 }
 
 onMounted(async () => {
-  console.log('mounted')
   if (route.params.id) {
     const id = parseInt(route.params.id as string)
     current.value = id

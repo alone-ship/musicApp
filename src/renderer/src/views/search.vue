@@ -38,6 +38,7 @@ const getSongs = async (newPage?: number): Promise<void> => {
   if (newPage) query.value.pageNo = newPage
   try {
     const response = await window.electron.ipcRenderer.invoke('/search', { ...query.value })
+    console.log(response)
     songlist.value = response['list'] || []
     total.value = response['total'] || 0
   } catch (error) {

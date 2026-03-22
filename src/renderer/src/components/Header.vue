@@ -56,9 +56,6 @@ const windowControls = (type: string): void => {
       <div class="windowControlBtn" @click="windowControls('min')">
         <el-icon size="20"><i-ep-Minus /></el-icon>
       </div>
-      <div class="windowControlBtn" @click="windowControls('max')">
-        <i class="maximize"></i>
-      </div>
       <div class="windowControlBtn" @click="windowControls('close')">
         <el-icon size="22"><i-ep-Close /></el-icon>
       </div>
@@ -104,7 +101,6 @@ const windowControls = (type: string): void => {
 
   .windowControls {
     display: flex;
-    margin-right: 20px;
     margin-left: auto;
     -webkit-app-region: no-drag;
 

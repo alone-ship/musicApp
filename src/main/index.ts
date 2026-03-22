@@ -72,16 +72,12 @@ const ipcs: Record<string, (event: IpcMainInvokeEvent, ...args: any[]) => any> =
   '/song/url': async (_event, ...args) => {
     return await qqMusic.api('/song/url', args[0])
   },
+  '/song/lyric': async (_event, ...args) => {
+    return await qqMusic.api('/lyric', args[0])
+  },
   winMinimize: () => {
     if (mainWindow) {
       mainWindow.minimize()
-    }
-  },
-  winMaximize: (_event, type) => {
-    if (type === 'restore') {
-      if (mainWindow) mainWindow.unmaximize()
-    } else {
-      if (mainWindow) mainWindow.maximize()
     }
   },
   winClose: () => {

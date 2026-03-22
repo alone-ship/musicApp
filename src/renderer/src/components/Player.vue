@@ -18,6 +18,8 @@ const playProgress = ref<number>(0)
 const playProgressmax = ref<number>(0)
 const audioCanUpdateProgress = ref<boolean>(true)
 const songMid = ref<string | null>(null)
+const lyricObj = ref<{ time: string; lyric: string }[] | null>(null)
+const currentLyricIndex = ref<number>(0)
 
 watch(
   () => currentSong.value,
@@ -60,12 +62,24 @@ const getSongUrl = async (current: any): Promise<void> => {
     if (current?.size320 && current?.size320 !== 0) type = '320'
     if (current?.sizeflac && current?.sizeflac !== 0) type = 'flac'
   }
-  console.log(current, type)
 
   if (songMid.value !== null) {
     songUrl.value = await window.electron.ipcRenderer.invoke('/song/url', {
       id: songMid.value,
       type
+    })
+    let songLyric = await window.electron.ipcRenderer.invoke('/song/lyric', {
+      songmid: songMid.value
+    })
+    let lyrics = songLyric?.lyric?.match(/\[\d+:\d+\.\d+\].+/g) || []
+    lyricObj.value = lyrics.map((lyric) => {
+      let strTime = lyric.match(/\[\d+:\d+\.\d+\]/)?.[0].replace(/\[/, '') || ''
+      let timeArr = strTime.split(':')
+      let time = (timeArr[0] * 60 + parseFloat(timeArr[1])).toFixed(2)
+      return {
+        time,
+        lyric: lyric.replace(/\[\d+:\d+\.\d+\]/, '').trim()
+      }
     })
   }
 }
@@ -86,12 +100,24 @@ const playCurrentSong = (): void => {
 const updatePlayProgress = (): void => {
   if (audioCanUpdateProgress.value && audioPlayer.value) {
     playProgress.value = audioPlayer.value?.currentTime || 0
+    if (lyricObj.value) {
+      let currentTime = playProgress.value.toFixed(2)
+      let nextlyricTime = lyricObj.value[currentLyricIndex.value + 1]?.time || ''
+      if (Number(currentTime) >= Number(nextlyricTime) - 0.5) {
+        currentLyricIndex.value++
+      }
+    }
   }
 }
 
 const handlePlayProgressChange = (): void => {
   if (audioPlayer.value) {
     audioPlayer.value.currentTime = playProgress.value
+    for (let i = currentLyricIndex.value; i < (lyricObj.value || []).length; i++) {
+      if (playProgress.value >= Number((lyricObj.value || [])[i]?.time || '')) {
+        currentLyricIndex.value = i
+      }
+    }
   }
 }
 
@@ -134,6 +160,7 @@ const changeCurrentSong = (index: number): void => {
             })
           }
           currentSong.value = playinglist.value[songIndex.value]
+          currentLyricIndex.value = 0
         }
         break
       case 2:
@@ -147,6 +174,7 @@ const changeCurrentSong = (index: number): void => {
             songIndex.value = 0
           }
           currentSong.value = playinglist.value[songIndex.value]
+          currentLyricIndex.value = 0
         }
         break
       case 3:
@@ -157,12 +185,14 @@ const changeCurrentSong = (index: number): void => {
           }
           songIndex.value = randomIndex
           currentSong.value = playinglist.value[randomIndex]
+          currentLyricIndex.value = 0
         }
         break
       default: {
         if (audioPlayer.value) {
           audioPlayer.value.currentTime = 0
           audioPlayer.value.play()
+          currentLyricIndex.value = 0
         }
       }
     }
@@ -208,6 +238,9 @@ const changeMuted = (): void => {
           {{ (currentSong as any)?.title || (currentSong as any)?.songname || '歌曲名称' }}
         </p>
         <p class="singer-name">{{ joinSingerName(currentSong) }}</p>
+        <p class="current-lyric">
+          {{ lyricObj?.[currentLyricIndex]?.lyric || '&nbsp;' }}
+        </p>
       </div>
     </div>
     <div class="play-controls">
@@ -307,10 +340,13 @@ const changeMuted = (): void => {
           appearance: none;
           width: 3px;
           height: 3px;
-          background-color: var(--el-color-success);
+          background-color: var(--el-color-primary-light-3);
           border: 1px solid transparent;
-          border-image: linear-gradient(var(--el-color-success), var(--el-color-success)) 0 fill / 0
-            0 0 0 / 0 0 0 99vw;
+          border-image: linear-gradient(
+              var(--el-color-primary-light-3),
+              var(--el-color-primary-light-3)
+            )
+            0 fill / 0 0 0 0 / 0 0 0 99vw;
         }
       }
       &:hover {
@@ -320,6 +356,9 @@ const changeMuted = (): void => {
         .progress::-webkit-slider-thumb {
           -webkit-appearance: none;
           height: 5px;
+          background-color: var(--el-color-primary);
+          border-image: linear-gradient(var(--el-color-primary), var(--el-color-primary)) 0 fill / 0
+            0 0 0 / 0 0 0 99vw;
         }
       }
     }
@@ -367,6 +406,17 @@ const changeMuted = (): void => {
         text-overflow: ellipsis;
         margin-top: 10px;
         font-size: 12px;
+      }
+
+      .current-lyric {
+        min-width: 292px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 10px;
+        font-size: 11px;
+        color: var(--el-color-success);
+        font-weight: bold;
       }
     }
   }
