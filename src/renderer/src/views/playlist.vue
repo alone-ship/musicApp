@@ -16,7 +16,7 @@ const getPlaylist = async (newPage?: number): Promise<void> => {
     category: currentCategory.value?.id || '',
     pageSize: pageSize.value,
     pageNo: pageNo.value,
-    sort: 2
+    sort: 5
   }
   const playlistRes = await window.electron.ipcRenderer.invoke('/songlist/list', query)
   total.value = playlistRes['total']

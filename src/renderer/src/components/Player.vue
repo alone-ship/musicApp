@@ -414,7 +414,7 @@ const changeMuted = (): void => {
         overflow: hidden;
         text-overflow: ellipsis;
         margin-top: 10px;
-        font-size: 11px;
+        font-size: 14px;
         color: var(--el-color-success);
         font-weight: bold;
       }
